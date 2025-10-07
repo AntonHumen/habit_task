@@ -1,0 +1,167 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Habit Tracker</title>
+  <!-- Google Font -->
+  <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@400;700&display=swap" rel="stylesheet">
+
+  <style>
+    :root {
+      --bg-color: #f9f9f9;
+      --text-color: #222;
+      --accent-color: #0077ff;
+      --item-border: #ddd;
+    }
+    body.dark {
+      --bg-color: #1e1e1e;
+      --text-color: #eee;
+      --accent-color: #66aaff;
+      --item-border: #444;
+    }
+
+    body {
+      font-family: 'Roboto', sans-serif;
+      padding: 20px;
+      max-width: 800px;
+      margin: 0 auto;
+      background-color: var(--bg-color);
+      color: var(--text-color);
+      transition: background 0.3s, color 0.3s;
+    }
+    h1 {
+      margin-top: 0;
+      color: var(--accent-color);
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+    form {
+      display: flex;
+      gap: 8px;
+      margin-bottom: 16px;
+    }
+    input[type=text] {
+      flex: 1;
+      padding: 8px;
+      border: 1px solid var(--item-border);
+      border-radius: 4px;
+      background: var(--bg-color);
+      color: var(--text-color);
+    }
+    button {
+      padding: 8px 12px;
+      border: none;
+      border-radius: 4px;
+      background: var(--accent-color);
+      color: white;
+      cursor: pointer;
+      transition: 0.2s;
+    }
+    button:hover {
+      opacity: 0.8;
+    }
+    ul {
+      list-style: none;
+      padding: 0;
+    }
+    li {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      padding: 8px 0;
+      border-bottom: 1px solid var(--item-border);
+    }
+    .completed {
+      opacity: 0.6;
+      text-decoration: line-through;
+    }
+    #theme-toggle {
+      background: transparent;
+      color: var(--text-color);
+      border: 1px solid var(--item-border);
+      font-size: 14px;
+      padding: 6px 10px;
+    }
+  </style>
+</head>
+<body>
+  <h1>
+    Habit Tracker
+    <button id="theme-toggle">🌙 Dark</button>
+  </h1>
+
+  <form id="add-form">
+    <input type="text" id="name" placeholder="New habit name" required />
+    <button type="submit">Add</button>
+  </form>
+
+  <ul id="list"></ul>
+
+  <script>
+    const listEl = document.getElementById('list')
+    const form = document.getElementById('add-form')
+    const themeBtn = document.getElementById('theme-toggle')
+
+    // Light/Dark toggle
+    themeBtn.addEventListener('click', () => {
+      document.body.classList.toggle('dark')
+      themeBtn.textContent = document.body.classList.contains('dark') ? "☀️ Light" : "🌙 Dark"
+    })
+
+    async function fetchHabits(){
+      const res = await fetch('/habits/')
+      const data = await res.json()
+      render(data)
+    }
+
+    function render(habits){
+      listEl.innerHTML = ''
+      for(const h of habits){
+        const li = document.createElement('li')
+        li.className = h.completed ? 'completed' : ''
+
+        const name = document.createElement('span')
+        name.textContent = h.name
+
+        const completeBtn = document.createElement('button')
+        completeBtn.textContent = 'Complete'
+        completeBtn.disabled = h.completed
+        completeBtn.onclick = async ()=>{
+          await fetch(`/habits/${h.id}/complete`, {method:'PUT'})
+          await fetchHabits()
+        }
+
+        const delBtn = document.createElement('button')
+        delBtn.textContent = 'Delete'
+        delBtn.onclick = async ()=>{
+          await fetch(`/habits/${h.id}`, {method:'DELETE'})
+          await fetchHabits()
+        }
+
+        li.appendChild(name)
+        li.appendChild(completeBtn)
+        li.appendChild(delBtn)
+        listEl.appendChild(li)
+      }
+    }
+
+    form.addEventListener('submit', async (e)=>{
+      e.preventDefault()
+      const name = document.getElementById('name').value.trim()
+      if(!name) return
+      await fetch('/habits/', {
+        method: 'POST',
+        headers: {'Content-Type':'application/json'},
+        body: JSON.stringify({name})
+      })
+      document.getElementById('name').value = ''
+      await fetchHabits()
+    })
+
+    // initial load
+    fetchHabits()
+  </script>
+</body>
+</html>
